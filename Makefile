@@ -1,14 +1,11 @@
+TARGET = iphone:clang:latest:5.0
+
+SUBPROJECTS = Tweak Tool
+
 include theos/makefiles/common.mk
+include $(THEOS_MAKE_PATH)/aggregate.mk
 
-TWEAK_NAME = AppSync
-IPHONE_ARCHS = armv7 arm64
-TARGET_IPHONEOS_DEPLOYMENT_VERSION = 5.0
-
-AppSync_FILES = Tweak.x
-AppSync_CFLAGS = -fvisibility=hidden
-AppSync_LIBRARIES = substrate
-
-include $(THEOS_MAKE_PATH)/tweak.mk
+VERSION.INC_BUILD_NUMBER = 1
 
 stage::
-	plutil -convert binary1 "$(THEOS_STAGING_DIR)/Library/MobileSubstrate/DynamicLibraries/$(TWEAK_NAME).plist"
+	find "$(THEOS_STAGING_DIR)" -type f \( -iname "*.strings" -o -iname "*.plist" \) -exec plutil -convert binary1 {} \;

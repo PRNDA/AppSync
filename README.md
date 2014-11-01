@@ -1,5 +1,5 @@
-# AppSync for iOS 7 
-_iOS 5+ is supported_
+# AppSync for iOS 8
+_Support iOS 5 through 8.1_
 
 Copyright (c) 2014 Linus Yang
 
@@ -10,19 +10,18 @@ Copyright (c) 2014 Linus Yang
 * __Jailbreak__ is __for__ _freedom of your iOS device_.
 * __NO__ Debian package of AppSync will be provided here.
 
+Install
+------
+* Add repo http://yangapp.googlecode.com/svn to Cydia, then search and install "AppSync",
+* Or manually download at the [Release Tab](https://github.com/linusyang/AppSync/releases) and install by iFile or dpkg.
+
 Introduction
 ------
 _AppSync_ is a tool to synchronize your IPA Package freely, especially useful for iOS developers who are not enrolled in the iOS developers' program to test their apps on devices.
 
-Currently, all so-called "AppSync for iOS 7" is made by the notorious Chinese iOS piracy website [25pp.com](http://pro.25pp.com). This 25pp version of AppSync modifies `installd`'s launch daemon plist file for interposing signature checking routines, which is __an ugly workaround__ and __extremely unstable__, causing force close of system apps, or other unexpected behaviours.
+This AppSync implementation ultilizes the dynamic hooking function `MSHookFunction` of Cydia Substrate by @saurik to bypass the signature check, which does not modify any system files and is more generic, stable and safe.
 
-On the contrary, the AppSync implementation here ultilizes the dynamic hooking function `MSHookFunction` of Cydia Substrate by @saurik to bypass the signature check, which does not modify any system files and is more generic, stable and safe.
-
-Again, AppSync is __NOT__ meant to support piracy. __Please no piracy and support developers!__
-
-Reference
-------
-[com.saurik.iphone.fmil by @saurik](http://svn.saurik.com/repos/menes/trunk/tweaks/fmil/Tweak.mm)
+AppSync is __NOT__ meant to support piracy. __Please do not pirate apps and support developers!__
 
 Build
 ------
@@ -32,6 +31,10 @@ cd AppSync
 make
 make package # If you have dpkg-deb utilities
 ```
+
+Reference
+------
+[com.saurik.iphone.fmil by @saurik](http://svn.saurik.com/repos/menes/trunk/tweaks/fmil/Tweak.mm)
 
 License
 ------

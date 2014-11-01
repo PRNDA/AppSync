@@ -2,12 +2,12 @@ Package: com.linusyang.appsync
 Name: AppSync
 Priority: standard
 Pre-Depends: firmware (>= 5.0), mobilesubstrate (>= 0.9.5000)
-Conflicts: us.hackulo.appsync50plus
+Conflicts: us.hackulo.appsync50plus, net.angelxwind.appsyncunified, com.teiron.ppsync, com.xsellize.appsync50, com.xsellize.appsync50plus, appsync50plus.178
 Provides: appsync
-Version: 0.2
+Version: 0.3
 Architecture: iphoneos-arm
-Description: AppSync for iOS 5, 6 and 7+
-Maintainer: Linus Yang <laokongzi@gmail.com>
-Author: Linus Yang <laokongzi@gmail.com>
+Description: AppSync for iOS 5 through 8.1
+Maintainer: Linus Yang <laokongzi+appsync@gmail.com>
+Author: Linus Yang <laokongzi+appsync@gmail.com>
 Section: Tweaks
 Homepage: https://github.com/linusyang/AppSync
