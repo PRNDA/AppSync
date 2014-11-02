@@ -1,0 +1,12 @@
+Package: com.linusyang.appinst
+Name: App Installer
+Priority: standard
+Pre-Depends: firmware (>= 5.0)
+Version: 0.1
+Architecture: iphoneos-arm
+Description: install ipa files from command line
+Maintainer: Linus Yang <laokongzi+appsync@gmail.com>
+Author: Linus Yang <laokongzi+appsync@gmail.com>
+Section: Utilities
+Homepage: https://github.com/linusyang/AppSync
+Tag: role::enduser, purpose::console

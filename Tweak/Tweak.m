@@ -25,12 +25,7 @@
 
 #import <Foundation/Foundation.h>
 #import <Security/Security.h>
-
-#ifndef kCFCoreFoundationVersionNumber_iOS_8_0
-#define kCFCoreFoundationVersionNumber_iOS_8_0 1140.10
-#endif
-
-#define SHOW_INFO 1
+#import "../Tool/misc.h"
 
 /* Minimal Cydia Substrate header */
 typedef const void *MSImageRef;
@@ -67,11 +62,8 @@ void MSHookFunction(void *symbol, void *replace, void **result);
 static const uint8_t kSecMagicBytes[kSecMagicBytesLength] = {0xa1, 0x13};
 #define kSecSubjectCStr "Apple iPhone OS Application Signing"
 
-#if SHOW_INFO
 #define kInfoBytesLength 10
 static const uint32_t kInfoBytes[kInfoBytesLength] = {0x68e8f97, 0xc67e14de, 0xf16768c, 0xc69e4636, 0x4eac0c4e, 0x14440c9e, 0x8c84ac0c, 0x6e467ea7, 0x940fc606, 0x7e350d0e};
-#define ROR(x) (((x) >> 3) | ((x) << 29))
-#endif
 
 static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier, NSDictionary **info)
 {
@@ -82,8 +74,8 @@ static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier,
     }
     NSString *executablePath = [bundle executablePath];
     NSData *content = [NSData dataWithContentsOfFile:executablePath];
-    NSRange startRange = [content rangeOfData:[@"<plist" dataUsingEncoding:NSUTF8StringEncoding] options:0 range:NSMakeRange(0, content.length)];
-    NSRange endRange = [content rangeOfData:[@"</plist>" dataUsingEncoding:NSUTF8StringEncoding] options:0 range:NSMakeRange(0, content.length)];
+    NSRange startRange = [content rangeOfData:[@"<plist" dataUsingEncoding:NSUTF8StringEncoding] options:NSDataSearchBackwards range:NSMakeRange(0, content.length)];
+    NSRange endRange = [content rangeOfData:[@"</plist>" dataUsingEncoding:NSUTF8StringEncoding] options:NSDataSearchBackwards range:NSMakeRange(0, content.length)];
     if (startRange.location != NSNotFound &&
         endRange.location != NSNotFound &&
         endRange.location - startRange.location > 0) {
@@ -92,7 +84,7 @@ static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier,
         NSString *xmlContent = [NSString stringWithFormat:@"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n%@</plist>", contentString];
         [contentString release];
         NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:[xmlContent dataUsingEncoding:NSUTF8StringEncoding] options:NSPropertyListImmutable format:NULL error:&error];
-        if (plist != nil) {
+        if ([plist objectForKey:@"application-identifier"]) {
             *info = [[NSDictionary alloc] initWithDictionary:plist];
         }
     }
@@ -123,27 +115,13 @@ DECL_FUNC(SecCertificateCopySubjectSummary, CFStringRef, SecCertificateRef certi
 
 DECL_FUNC(MISValidateSignatureAndCopyInfo, uintptr_t, NSString *path, uintptr_t b, NSDictionary **info)
 {
-#if SHOW_INFO
-    static uint8_t crBytes[(kInfoBytesLength << 2) + 1] = {0};
-    static dispatch_once_t crOnceToken;
-    dispatch_once(&crOnceToken, ^{
-        uint8_t key = kSecMagicBytes[0];
-        for (int i = 0; i < kInfoBytesLength; i++) {
-            crBytes[(i << 2) + 1] = ((ROR(kInfoBytes[i]) >> 16) & 0xff) ^ key;
-            crBytes[(i << 2) + 3] = (ROR(kInfoBytes[i]) & 0xff) ^ key;
-            crBytes[i << 2] = ((ROR(kInfoBytes[i]) >> 24) & 0xff) ^ key;
-            crBytes[(i << 2) + 2] = ((ROR(kInfoBytes[i]) >> 8) & 0xff) ^ key;
-        }
-    });
-    NSString *crString = [NSString stringWithCString:(const char *) crBytes encoding:NSUTF8StringEncoding];
-    NSLog(crString, nil);
-#endif
+    COPY_NSLOG_ONCE(kInfoBytes, kInfoBytesLength, kSecMagicBytes[0]);
     original_MISValidateSignatureAndCopyInfo(path, b, info);
     if (info == NULL) {
         LOG(@"Boo, NULL info");
     } else if (*info == nil) {
         LOG(@"Ahh, nil info, fake it");
-        if (kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_8_0) {
+        if (SYSTEM_GE_IOS_8()) {
             static dispatch_once_t onceToken;
             dispatch_once(&onceToken, ^{
                 MSImageRef imageSec;

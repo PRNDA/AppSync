@@ -1,3 +1,6 @@
 [submodule "theos"]
 	path = theos
 	url = https://github.com/rpetrich/theos
+[submodule "App/zipzap"]
+	path = App/zipzap
+	url = https://github.com/pixelglow/zipzap.git
