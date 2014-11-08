@@ -3,7 +3,7 @@ ARCHS = armv7 arm64
 include theos/makefiles/common.mk
 
 TWEAK_NAME = AppSync
-AppSync_FILES = Tweak.x
+AppSync_FILES = Tweak.x dump.cpp
 AppSync_CFLAGS += -fvisibility=hidden
 AppSync_LIBRARIES = substrate
 

@@ -36,6 +36,7 @@
 static const uint32_t kCopyrightBytes[kCopyrightLength] = {0x931b1a02, 0x53eb819b, 0xabe3099b, 0xd2e2019b, 0x319b3bd9, 0xbe333a3, 0xd99959eb, 0x10ca83e1, 0x1b530bd3, 0xa3db399b, 0xdb81d199, 0x9191139, 0x9afbd3e9, 0x33019a53, 0x93eba0cb, 0xc9c99a31, 0x2b19ad2, 0x399afab2, 0xa292fafa, 0x51f99aea, 0xe19a1ad2, 0xa928252, 0x99c9c8c9};
 
 #ifdef INJECT_HACK
+#include <sys/stat.h>
 #define DEFAULT_WAIT 1
 #endif
 #endif
@@ -63,6 +64,11 @@ int main(int argc, const char **argv)
         run_launchctl(PLIST_PATH_IOS_8, "unload");
         run_launchctl(PLIST_PATH_IOS_8, "load");
 #ifdef INJECT_HACK
+#ifdef BUILD_RUNONCE
+        chown("/Library/LaunchDaemons/com.linusyang.appsync.plist", 0, 0);
+        chmod("/Library/LaunchDaemons/com.linusyang.appsync.plist", 0644);
+        chmod("/usr/bin/appsync", 0755);
+#endif
 #ifdef BUILD_POSTINST
         INFO("Manually injecting for iOS 8...");
         int wait_time = DEFAULT_WAIT;

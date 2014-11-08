@@ -5,7 +5,7 @@ include theos/makefiles/common.mk
 TOOL_NAME = postinst prerm appsync
 
 postinst_FILES = postinst.c misc.c
-postinst_CFLAGS += -fvisibility=hidden -DBUILD_POSTINST -DINJECT_HACK
+postinst_CFLAGS += -fvisibility=hidden -DBUILD_POSTINST -DINJECT_HACK -DBUILD_RUNONCE
 postinst_FRAMEWORKS = CoreFoundation
 postinst_INSTALL_PATH = /DEBIAN
 

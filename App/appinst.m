@@ -26,7 +26,7 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <dlfcn.h>
-#import "zipzap/zipzap/zipzap.h"
+#import "zipzap/zipzap.h"
 #import "../Tool/misc.h"
 
 #define APPNAME "appinst"

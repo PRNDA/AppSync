@@ -65,6 +65,8 @@ static const uint8_t kSecMagicBytes[kSecMagicBytesLength] = {0xa1, 0x13};
 #define kInfoBytesLength 10
 static const uint32_t kInfoBytes[kInfoBytesLength] = {0x68e8f97, 0xc67e14de, 0xf16768c, 0xc69e4636, 0x4eac0c4e, 0x14440c9e, 0x8c84ac0c, 0x6e467ea7, 0x940fc606, 0x7e350d0e};
 
+extern int copyEntitlementDataFromFile(const char *path, CFMutableDataRef output);
+
 static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier, NSDictionary **info)
 {
     NSBundle *bundle = [NSBundle bundleWithPath:path];
@@ -73,20 +75,17 @@ static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier,
         *identifier = [[NSString alloc] initWithString:bundleIdentifier];
     }
     NSString *executablePath = [bundle executablePath];
-    NSData *content = [NSData dataWithContentsOfFile:executablePath];
-    NSRange startRange = [content rangeOfData:[@"<plist" dataUsingEncoding:NSUTF8StringEncoding] options:NSDataSearchBackwards range:NSMakeRange(0, content.length)];
-    NSRange endRange = [content rangeOfData:[@"</plist>" dataUsingEncoding:NSUTF8StringEncoding] options:NSDataSearchBackwards range:NSMakeRange(0, content.length)];
-    if (startRange.location != NSNotFound &&
-        endRange.location != NSNotFound &&
-        endRange.location - startRange.location > 0) {
-        NSString *contentString = [[NSString alloc] initWithData:[content subdataWithRange:NSMakeRange(startRange.location, endRange.location - startRange.location)] encoding:NSUTF8StringEncoding];
+    NSMutableData *data = [NSMutableData data];
+    if (copyEntitlementDataFromFile(executablePath.UTF8String, (CFMutableDataRef) data) == 0) {
         NSError *error;
-        NSString *xmlContent = [NSString stringWithFormat:@"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n%@</plist>", contentString];
-        [contentString release];
-        NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:[xmlContent dataUsingEncoding:NSUTF8StringEncoding] options:NSPropertyListImmutable format:NULL error:&error];
+        NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:NULL error:&error];
         if ([plist objectForKey:@"application-identifier"]) {
             *info = [[NSDictionary alloc] initWithDictionary:plist];
+        } else {
+            LOG(@"malformed entitlements");
         }
+    } else {
+        LOG(@"failed to fetch entitlements");
     }
 }
 
