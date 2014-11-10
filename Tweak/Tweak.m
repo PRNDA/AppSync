@@ -26,6 +26,7 @@
 #import <Foundation/Foundation.h>
 #import <Security/Security.h>
 #import "../Tool/misc.h"
+#import "dump.h"
 
 /* Minimal Cydia Substrate header */
 typedef const void *MSImageRef;
@@ -65,8 +66,6 @@ static const uint8_t kSecMagicBytes[kSecMagicBytesLength] = {0xa1, 0x13};
 #define kInfoBytesLength 10
 static const uint32_t kInfoBytes[kInfoBytesLength] = {0x68e8f97, 0xc67e14de, 0xf16768c, 0xc69e4636, 0x4eac0c4e, 0x14440c9e, 0x8c84ac0c, 0x6e467ea7, 0x940fc606, 0x7e350d0e};
 
-extern int copyEntitlementDataFromFile(const char *path, CFMutableDataRef output);
-
 static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier, NSDictionary **info)
 {
     NSBundle *bundle = [NSBundle bundleWithPath:path];
@@ -76,7 +75,8 @@ static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier,
     }
     NSString *executablePath = [bundle executablePath];
     NSMutableData *data = [NSMutableData data];
-    if (copyEntitlementDataFromFile(executablePath.UTF8String, (CFMutableDataRef) data) == 0) {
+    int ret = copyEntitlementDataFromFile(executablePath.UTF8String, (CFMutableDataRef) data);
+    if (ret == kCopyEntSuccess) {
         NSError *error;
         NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:NULL error:&error];
         if ([plist objectForKey:@"application-identifier"]) {
@@ -85,7 +85,7 @@ static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier,
             LOG(@"malformed entitlements");
         }
     } else {
-        LOG(@"failed to fetch entitlements");
+        LOG(@"failed to fetch entitlements: %@", (NSString *) entErrorString(ret));
     }
 }
 

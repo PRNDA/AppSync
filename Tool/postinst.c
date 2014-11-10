@@ -38,6 +38,7 @@ static const uint32_t kCopyrightBytes[kCopyrightLength] = {0x931b1a02, 0x53eb819
 #ifdef INJECT_HACK
 #include <sys/stat.h>
 #define DEFAULT_WAIT 1
+#define MAX_TRY 15
 #endif
 #endif
 
@@ -71,13 +72,6 @@ int main(int argc, const char **argv)
 #endif
 #ifdef BUILD_POSTINST
         INFO("Manually injecting for iOS 8...");
-        int wait_time = DEFAULT_WAIT;
-        if (argc > 1) {
-            wait_time = atoi(argv[1]);
-            if (wait_time < DEFAULT_WAIT) {
-                wait_time = DEFAULT_WAIT;
-            }
-        }
         pid_t pid = -1;
         int status = -1;
         int tried = 0;
@@ -85,8 +79,15 @@ int main(int argc, const char **argv)
             sleep(DEFAULT_WAIT);
             status = inject_installd(&pid);
             tried++;
-            INFO("%d: Inject installd (%d) with return %d", tried, pid, status);
-        } while (tried < wait_time && (pid == -1 || status != 0));
+            INFO("Inject installd (%d) with return %d", pid, status);
+        } while (tried < MAX_TRY && (pid == -1 || status != 0));
+        if (pid == -1 || status != 0) {
+#ifdef BUILD_RUNONCE
+            INFO("Inject failed, try to reinstall the package");
+#else
+            INFO("Inject failed, try again");
+#endif
+        }
 #else
         run_launchctl("/Library/LaunchDaemons/com.linusyang.appsync.plist", "unload");
 #endif

@@ -44,14 +44,10 @@
 **/
 /* }}} */
 
-#include <CoreFoundation/CoreFoundation.h>
-
-#include <string>
-#include <vector>
-
+#include "dump.h"
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include <errno.h>
+#include <vector>
 
 #define _packed \
     __attribute__((packed))
@@ -59,29 +55,14 @@
 #define _not(type) \
     ((type) ~ (type) 0)
 
-#define _assert___(line) \
-    #line
-#define _assert__(line) \
-    _assert___(line)
-#define _assert_(e) \
-    throw __FILE__ "(" _assert__(__LINE__) "): _assert(" e ")"
-#define _assert(expr) \
-    do if (!(expr)) { \
-        _assert_(#expr); \
-    } while (false)
-
-#define _syscall(expr) ({ \
-    __typeof__(expr) _value; \
-    do if ((long) (_value = (expr)) != -1) \
-        break; \
-    else switch (errno) { \
-        case EINTR: \
-            continue; \
-        default: \
-            _assert(false); \
-    } while (true); \
-    _value; \
-})
+#define FAT_MAGIC 0xcafebabe
+#define FAT_CIGAM 0xbebafeca
+#define MH_MAGIC 0xfeedface
+#define MH_CIGAM 0xcefaedfe
+#define MH_MAGIC_64 0xfeedfacf
+#define MH_CIGAM_64 0xcffaedfe
+#define LC_CODE_SIGNATURE     uint32_t(0x1d)
+#define CSSLOT_ENTITLEMENTS   uint32_t(5)
 
 template <typename Type_>
 struct Iterator_ {
@@ -100,9 +81,6 @@ struct fat_header {
     uint32_t nfat_arch;
 } _packed;
 
-#define FAT_MAGIC 0xcafebabe
-#define FAT_CIGAM 0xbebafeca
-
 struct fat_arch {
     uint32_t cputype;
     uint32_t cpusubtype;
@@ -110,16 +88,6 @@ struct fat_arch {
     uint32_t size;
     uint32_t align;
 } _packed;
-
-#define MH_MAGIC 0xfeedface
-#define MH_CIGAM 0xcefaedfe
-
-#define MH_MAGIC_64 0xfeedfacf
-#define MH_CIGAM_64 0xcffaedfe
-
-#define MH_EXECUTE    0x2
-#define MH_DYLIB      0x6
-#define MH_BUNDLE     0x8
 
 struct mach_header {
     uint32_t magic;
@@ -198,11 +166,6 @@ struct load_command {
     uint32_t cmd;
     uint32_t cmdsize;
 } _packed;
-
-#define LC_SEGMENT            uint32_t(0x01)
-#define LC_SEGMENT_64         uint32_t(0x19)
-#define LC_CODE_SIGNATURE     uint32_t(0x1d)
-#define CSSLOT_ENTITLEMENTS   uint32_t(5)
 
 struct BlobIndex {
     uint32_t type;
@@ -299,19 +262,13 @@ class MachHeader :
             break;
 
             default:
-                _assert(false);
+                break;
         }
 
         void *post = mach_header_ + 1;
         if (bits64_)
             post = (uint32_t *) post + 1;
         load_command_ = (struct load_command *) post;
-
-        _assert(
-            Swap(mach_header_->filetype) == MH_EXECUTE ||
-            Swap(mach_header_->filetype) == MH_DYLIB ||
-            Swap(mach_header_->filetype) == MH_BUNDLE
-        );
     }
 
     struct mach_header *operator ->() const {
@@ -388,38 +345,66 @@ class FatHeader :
     struct fat_header *operator ->() const {
         return fat_header_;
     }
+
+    ~FatHeader() {
+        if (GetBase() != NULL) {
+            munmap(GetBase(), GetSize());
+        }
+    }
 };
 
-static void *map(const char *path, size_t offset, size_t size, size_t *psize, bool ro) {
+static void *map(const char *path, size_t offset, size_t size, size_t *psize) {
     int fd;
-    _syscall(fd = open(path, ro ? O_RDONLY : O_RDWR));
+    void *base = NULL;
+
+    fd = open(path, O_RDONLY);
+    if (fd == -1) {
+        return NULL;
+    }
 
     if (size == _not(size_t)) {
         struct stat stat;
-        _syscall(fstat(fd, &stat));
+        if (fstat(fd, &stat) == -1) {
+            goto fail;
+        }
         size = stat.st_size;
     }
 
     if (psize != NULL)
         *psize = size;
 
-    void *base;
-    _syscall(base = mmap(NULL, size, ro ? PROT_READ : PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset));
+    base = mmap(NULL, size, PROT_READ, MAP_SHARED, fd, offset);
+    if (base == MAP_FAILED) {
+        base = NULL;
+    }
 
-    _syscall(close(fd));
+fail:
+    close(fd);
     return base;
 }
 
-static FatHeader Map(const char *path, bool ro = false) {
-    size_t size;
-    void *base(map(path, 0, _not(size_t), &size, ro));
-    return FatHeader(base, size);
+#ifdef DEBUG
+CFStringRef entErrorString(int code)
+{
+    static CFStringRef strings[] = {
+        CFSTR("success"),
+        CFSTR("argument is null"),
+        CFSTR("file read error"),
+        CFSTR("unknown error")
+    };
+    if (code >= kCopyEntSuccess && code < kCopyEntUnknown) {
+        return strings[code];
+    }
+    return strings[kCopyEntUnknown];
 }
-
-extern "C" int copyEntitlementDataFromFile(const char *path, CFMutableDataRef output);
+#endif
 
 int copyEntitlementDataFromFile(const char *path, CFMutableDataRef output)
 {
+    if (path == NULL || output == NULL) {
+        return kCopyEntArgumentNull;
+    }
+
     static union {
         uint16_t word;
         uint8_t byte[2];
@@ -427,50 +412,65 @@ int copyEntitlementDataFromFile(const char *path, CFMutableDataRef output)
 
     little_ = endian.byte[0];
 
-    try {
-        FatHeader fat_header(Map(path, true));
-        struct linkedit_data_command *signature(NULL);
+    size_t size;
+    void *base(map(path, 0, _not(size_t), &size));
+    if (base == NULL) {
+        return kCopyEntMapFail;
+    }
 
-        _foreach (mach_header, fat_header.GetMachHeaders()) {
-            _foreach (load_command, mach_header.GetLoadCommands()) {
-                uint32_t cmd(mach_header.Swap(load_command->cmd));
-                if (cmd == LC_CODE_SIGNATURE) {
-                    signature = reinterpret_cast<struct linkedit_data_command *>(load_command);
-                    if (signature != NULL) {               
-                        uint32_t data = mach_header.Swap(signature->dataoff);
+    FatHeader fat_header(base, size);
+    struct linkedit_data_command *signature(NULL);
 
-                        uint8_t *top = reinterpret_cast<uint8_t *>(mach_header.GetBase());
-                        uint8_t *blob = top + data;
-                        struct SuperBlob *super = reinterpret_cast<struct SuperBlob *>(blob);
+    _foreach (mach_header, fat_header.GetMachHeaders()) {
+        _foreach (load_command, mach_header.GetLoadCommands()) {
+            uint32_t cmd(mach_header.Swap(load_command->cmd));
+            if (cmd == LC_CODE_SIGNATURE) {
+                signature = reinterpret_cast<struct linkedit_data_command *>(load_command);
+                if (signature != NULL) {               
+                    uint32_t data = mach_header.Swap(signature->dataoff);
 
-                        for (size_t index(0); index != Swap(super->count); ++index) {
-                            if (Swap(super->index[index].type) == CSSLOT_ENTITLEMENTS) {
-                                uint32_t begin = Swap(super->index[index].offset);
-                                struct Blob *entitlements = reinterpret_cast<struct Blob *>(blob + begin);
-                                CFDataAppendBytes(output, (const uint8_t *) (entitlements + 1), Swap(entitlements->length) - sizeof(struct Blob));
-                            }
+                    uint8_t *top = reinterpret_cast<uint8_t *>(mach_header.GetBase());
+                    uint8_t *blob = top + data;
+                    struct SuperBlob *super = reinterpret_cast<struct SuperBlob *>(blob);
+
+                    for (size_t index(0); index != Swap(super->count); ++index) {
+                        if (Swap(super->index[index].type) == CSSLOT_ENTITLEMENTS) {
+                            uint32_t begin = Swap(super->index[index].offset);
+                            struct Blob *entitlements = reinterpret_cast<struct Blob *>(blob + begin);
+                            CFDataAppendBytes(output, (const uint8_t *) (entitlements + 1), Swap(entitlements->length) - sizeof(struct Blob));
                         }
-
-                        return 0;
                     }
+
+                    return kCopyEntSuccess;
                 }
             }
         }
-    } catch (const char *exception) {
-#ifdef DEBUG
-        fprintf(stderr, "exception thrown: %s\n", exception);
-#endif
     }
-    return -1;
+    return kCopyEntUnknown;
 }
 
 #ifdef DUMP_TEST
-int main(void)
+int main(int argc, const char *argv[])
 {
-    CFMutableDataRef data = CFDataCreateMutable(NULL, 0);
-    if (copyEntitlementDataFromFile("binary", data) == 0) {
-        CFShow(data);
+    if (argc < 2) {
+        fprintf(stderr, "%s: missing arguments\n", argv[0]);
+        return 1;
     }
+    CFMutableDataRef data = CFDataCreateMutable(NULL, 0);
+    int ret = copyEntitlementDataFromFile(argv[1], data);
+    if (ret == kCopyEntSuccess) {
+        CFStringRef str = CFStringCreateFromExternalRepresentation(NULL, data,
+            kCFStringEncodingUTF8);
+        CFShow(str);
+        CFRelease(str);
+    } else {
+#ifdef DEBUG
+        CFLog(kCFLogLevelError, CFSTR("failed to dump (%@)"), entErrorString(ret));
+#else
+        fprintf(stderr, "%s: failed to dump (error %d)\n", argv[0], ret);
+#endif
+    }
+    CFRelease(data);
     return 0;
 }
 #endif

@@ -9,7 +9,6 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/bin/appsync</string>
-		<string>10</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
