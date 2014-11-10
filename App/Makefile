@@ -18,4 +18,4 @@ appinst_INSTALL_PATH = /usr/bin
 
 include $(THEOS_MAKE_PATH)/tool.mk
 
-VERSION.INC_BUILD_NUMBER = 1
+VERSION.INC_BUILD_NUMBER = 2

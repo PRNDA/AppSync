@@ -7,6 +7,7 @@ Provides: appsync
 Version: 0.3.1
 Architecture: iphoneos-arm
 Description: AppSync for iOS 5 through 8.1
+Depiction: https://yangapp.googlecode.com/svn/info/appsync.html
 Maintainer: Linus Yang <laokongzi+appsync@gmail.com>
 Author: Linus Yang <laokongzi+appsync@gmail.com>
 Section: Tweaks
