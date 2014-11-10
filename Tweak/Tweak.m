@@ -63,22 +63,35 @@ static const uint32_t kInfoBytes[kInfoBytesLength] = {0x68e8f97, 0xc67e14de, 0xf
 
 static void copyIdentifierAndEntitlements(NSString *path, NSString **identifier, NSDictionary **info)
 {
+    if (path == nil || identifier == NULL || info == NULL) {
+        LOG(@"copyIdentifierAndEntitlements: null args");
+        return;
+    }
+
+    LOG(@"bundle path: %@", path);
     NSBundle *bundle = [NSBundle bundleWithPath:path];
+
     NSString *bundleIdentifier = [bundle bundleIdentifier];
     if (bundleIdentifier != nil) {
         *identifier = [[NSString alloc] initWithString:bundleIdentifier];
+        LOG(@"bundle id: %@", bundleIdentifier);
     }
+
     NSString *executablePath = [bundle executablePath];
+    NSArray *paths = [executablePath pathComponents];
+    if (paths.count > 0 && [paths.lastObject isEqualToString:@"Cydia"]) {
+        NSMutableArray *newPaths = [NSMutableArray arrayWithArray:paths];
+        newPaths[newPaths.count - 1] = @"MobileCydia";
+        executablePath = [NSString pathWithComponents:newPaths];
+    }
+    LOG(@"bundle exec: %@", executablePath);
+
     NSMutableData *data = [NSMutableData data];
     int ret = copyEntitlementDataFromFile(executablePath.UTF8String, (CFMutableDataRef) data);
     if (ret == kCopyEntSuccess) {
         NSError *error;
         NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:NULL error:&error];
-        if ([plist objectForKey:@"application-identifier"]) {
-            *info = [[NSDictionary alloc] initWithDictionary:plist];
-        } else {
-            LOG(@"malformed entitlements");
-        }
+        *info = [[NSDictionary alloc] initWithDictionary:plist];
     } else {
         LOG(@"failed to fetch entitlements: %@", (NSString *) entErrorString(ret));
     }
@@ -140,12 +153,17 @@ DECL_FUNC(MISValidateSignatureAndCopyInfo, uintptr_t, NSString *path, uintptr_t 
             [fakeInfo setObject:[NSData dataWithBytes:kSecMagicBytes length:kSecMagicBytesLength] forKey:@"SignerCertificate"];
             [fakeInfo setObject:[NSDate date] forKey:@"SigningTime"];
             [fakeInfo setObject:[NSNumber numberWithBool:NO] forKey:@"ValidatedByProfile"];
-            *info = fakeInfo;
+            LOG(@"faked info: %@", fakeInfo);
+            if (info != NULL) {
+                *info = fakeInfo;
+            } else {
+                [fakeInfo release];
+            }
         }
     } else {
         LOG(@"Hooray, info is okay");
+        LOG(@"orig info: %@", *info);
     }
-    LOG(@"info: %@", *info);
     return 0;
 }
 

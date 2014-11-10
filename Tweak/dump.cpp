@@ -56,6 +56,9 @@
 #define MH_CIGAM 0xcefaedfe
 #define MH_MAGIC_64 0xfeedfacf
 #define MH_CIGAM_64 0xcffaedfe
+#define MH_EXECUTE    0x2
+#define MH_DYLIB      0x6
+#define MH_BUNDLE     0x8
 #define LC_CODE_SIGNATURE     uint32_t(0x1d)
 #define CSSLOT_ENTITLEMENTS   uint32_t(5)
 
@@ -257,13 +260,19 @@ class MachHeader :
             break;
 
             default:
-                break;
+                throw "unknown Mach-O magic";
         }
 
         void *post = mach_header_ + 1;
         if (bits64_)
             post = (uint32_t *) post + 1;
         load_command_ = (struct load_command *) post;
+
+        if (!(Swap(mach_header_->filetype) == MH_EXECUTE ||
+            Swap(mach_header_->filetype) == MH_DYLIB ||
+            Swap(mach_header_->filetype) == MH_BUNDLE)) {
+            throw "bad Mach-O file type";
+        }
     }
 
     struct mach_header *operator ->() const {
@@ -340,12 +349,6 @@ class FatHeader :
     struct fat_header *operator ->() const {
         return fat_header_;
     }
-
-    ~FatHeader() {
-        if (GetBase() != NULL) {
-            munmap(GetBase(), GetSize());
-        }
-    }
 };
 
 static void *map(const char *path, size_t offset, size_t size, size_t *psize) {
@@ -385,6 +388,7 @@ CFStringRef entErrorString(int code)
         CFSTR("success"),
         CFSTR("argument is null"),
         CFSTR("file read error"),
+        CFSTR("malformed Mach-O file"),
         CFSTR("unknown error")
     };
     if (code >= kCopyEntSuccess && code < kCopyEntUnknown) {
@@ -413,35 +417,50 @@ int copyEntitlementDataFromFile(const char *path, CFMutableDataRef output)
         return kCopyEntMapFail;
     }
 
-    FatHeader fat_header(base, size);
-    struct linkedit_data_command *signature(NULL);
+    int result = kCopyEntUnknown;
+    try {
+        FatHeader fat_header(base, size);
+        struct linkedit_data_command *signature(NULL);
 
-    _foreach (mach_header, fat_header.GetMachHeaders()) {
-        _foreach (load_command, mach_header.GetLoadCommands()) {
-            uint32_t cmd(mach_header.Swap(load_command->cmd));
-            if (cmd == LC_CODE_SIGNATURE) {
-                signature = reinterpret_cast<struct linkedit_data_command *>(load_command);
-                if (signature != NULL) {               
-                    uint32_t data = mach_header.Swap(signature->dataoff);
+        _foreach (mach_header, fat_header.GetMachHeaders()) {
+            _foreach (load_command, mach_header.GetLoadCommands()) {
+                uint32_t cmd(mach_header.Swap(load_command->cmd));
+                if (cmd == LC_CODE_SIGNATURE) {
+                    signature = reinterpret_cast<struct linkedit_data_command *>(load_command);
+                    if (signature != NULL) {               
+                        uint32_t data = mach_header.Swap(signature->dataoff);
 
-                    uint8_t *top = reinterpret_cast<uint8_t *>(mach_header.GetBase());
-                    uint8_t *blob = top + data;
-                    struct SuperBlob *super = reinterpret_cast<struct SuperBlob *>(blob);
+                        uint8_t *top = reinterpret_cast<uint8_t *>(mach_header.GetBase());
+                        uint8_t *blob = top + data;
+                        struct SuperBlob *super = reinterpret_cast<struct SuperBlob *>(blob);
 
-                    for (size_t index(0); index != Swap(super->count); ++index) {
-                        if (Swap(super->index[index].type) == CSSLOT_ENTITLEMENTS) {
-                            uint32_t begin = Swap(super->index[index].offset);
-                            struct Blob *entitlements = reinterpret_cast<struct Blob *>(blob + begin);
-                            CFDataAppendBytes(output, (const uint8_t *) (entitlements + 1), Swap(entitlements->length) - sizeof(struct Blob));
+                        for (size_t index(0); index != Swap(super->count); ++index) {
+                            if (Swap(super->index[index].type) == CSSLOT_ENTITLEMENTS) {
+                                uint32_t begin = Swap(super->index[index].offset);
+                                struct Blob *entitlements = reinterpret_cast<struct Blob *>(blob + begin);
+                                CFDataAppendBytes(output, (const uint8_t *) (entitlements + 1), Swap(entitlements->length) - sizeof(struct Blob));
+                            }
                         }
-                    }
 
-                    return kCopyEntSuccess;
+                        result = kCopyEntSuccess;
+                        goto cleanup;
+                    }
                 }
             }
         }
+
+    } catch (const char *exception) {
+#ifdef DEBUG
+        if (exception != NULL) {
+            CFLog(kCFLogLevelWarning, CFSTR("failed to process binary: %s"), exception);
+        }
+#endif
+        result = kCopyEntMachO;
     }
-    return kCopyEntUnknown;
+
+cleanup:
+    munmap(base, size);
+    return result;
 }
 
 #ifdef DUMP_TEST

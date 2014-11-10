@@ -30,12 +30,14 @@ enum {
     kCopyEntSuccess = 0,
     kCopyEntArgumentNull = 1,
     kCopyEntMapFail = 2,
-    kCopyEntUnknown = 3
+    kCopyEntMachO = 3,
+    kCopyEntUnknown = 4
 };
 
 #ifdef DEBUG
 enum {
-    kCFLogLevelError = 3
+    kCFLogLevelError = 3,
+    kCFLogLevelWarning = 4
 };
 extern void CFLog(int32_t level, CFStringRef format, ...);
 CFStringRef entErrorString(int code);
