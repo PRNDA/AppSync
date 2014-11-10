@@ -1,3 +1,6 @@
+# AppSync for iOS
+# Copyright (c) 2014 Linus Yang
+
 TARGET = iphone:clang:latest:5.0
 ARCHS = armv7 arm64
 TARGET_CODESIGN_FLAGS="-Sentitlement.plist"

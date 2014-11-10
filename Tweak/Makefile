@@ -1,3 +1,6 @@
+# AppSync for iOS
+# Copyright (c) 2014 Linus Yang
+
 ARCHS = armv7 arm64
 
 include theos/makefiles/common.mk

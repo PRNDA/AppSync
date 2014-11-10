@@ -1,3 +1,6 @@
+# AppSync for iOS
+# Copyright (c) 2014 Linus Yang
+
 TARGET = iphone:clang:latest:5.0
 
 SUBPROJECTS = Tweak Tool

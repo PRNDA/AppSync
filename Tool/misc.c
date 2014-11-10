@@ -1,12 +1,8 @@
 /*
+ *    misc.c
  *    AppSync for iOS
- *    https://github.com/linusyang/AppSync
  *
- *    Cydia Substrate tweak for arbitrary IPA package sync
- *    Work with iOS 5 through 8.1
- *    Copyright (c) 2014 Linus Yang <laokongzi (at) gmail.com>
- *
- *    AppSync is NOT for piracy. Use it legally.
+ *    Copyright (c) 2014 Linus Yang
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -20,7 +16,6 @@
  *
  *    You should have received a copy of the GNU General Public License
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  */
 
 #include <stdio.h>
