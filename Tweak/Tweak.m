@@ -154,11 +154,7 @@ DECL_FUNC(MISValidateSignatureAndCopyInfo, uintptr_t, NSString *path, uintptr_t 
             [fakeInfo setObject:[NSDate date] forKey:@"SigningTime"];
             [fakeInfo setObject:[NSNumber numberWithBool:NO] forKey:@"ValidatedByProfile"];
             LOG(@"faked info: %@", fakeInfo);
-            if (info != NULL) {
-                *info = fakeInfo;
-            } else {
-                [fakeInfo release];
-            }
+            *info = fakeInfo;
         }
     } else {
         LOG(@"Hooray, info is okay");
