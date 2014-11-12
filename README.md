@@ -7,7 +7,7 @@ AppSync is __NOT__ meant for piracy. __Please do not use it to install pirate ap
 Installation
 ------
 * Add repo http://yangapp.googlecode.com/svn to Cydia, then search and install "AppSync",
-* Or manually [download](http://yangapp.googlecode.com/svn/debs/com.linusyang.appsync_0.3_iphoneos-arm.deb) and install by iFile or `dpkg`.
+* Or manually [download](http://yangapp.googlecode.com/svn/debs/com.linusyang.appsync_0.4_iphoneos-arm.deb) and install by iFile or `dpkg`.
 * You can also install "App Installer" to install apps by command `appinst <ipa file>`.
 
 Introduction
