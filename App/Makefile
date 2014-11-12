@@ -9,8 +9,8 @@ include theos/makefiles/common.mk
 
 TOOL_NAME = appinst
 
-appinst_FILES = appinst.m $(wildcard zipzap/*.c) $(wildcard zipzap/*.cpp) $(wildcard zipzap/*.m) $(wildcard zipzap/*.mm) misc.cpp
-appinst_CFLAGS += --std=c++11 -stdlib=libc++ -fobjc-arc -include ./zipzap/zipzap-Prefix.pch -I./zipzap -fvisibility=hidden -Wno-unused-property-ivar -DINJECT_HACK -I../Tool
+appinst_FILES = appinst.m $(wildcard zipzap/*.c) $(wildcard zipzap/*.cpp) $(wildcard zipzap/*.m) $(wildcard zipzap/*.mm)
+appinst_CFLAGS += --std=c++11 -stdlib=libc++ -fobjc-arc -include ./zipzap/zipzap-Prefix.pch -I./zipzap -fvisibility=hidden -Wno-unused-property-ivar
 appinst_FRAMEWORKS = Foundation ImageIO CoreGraphics
 appinst_PRIVATE_FRAMEWORKS = MobileCoreServices
 appinst_LIBRARIES = z
@@ -18,4 +18,4 @@ appinst_INSTALL_PATH = /usr/bin
 
 include $(THEOS_MAKE_PATH)/tool.mk
 
-VERSION.INC_BUILD_NUMBER = 2
+VERSION.INC_BUILD_NUMBER = 1

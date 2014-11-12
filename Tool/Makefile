@@ -5,10 +5,10 @@ ARCHS = armv7 arm64
 
 include theos/makefiles/common.mk
 
-TOOL_NAME = postinst prerm appsync
+TOOL_NAME = postinst prerm
 
 postinst_FILES = postinst.c misc.c
-postinst_CFLAGS += -fvisibility=hidden -DBUILD_POSTINST -DINJECT_HACK -DBUILD_RUNONCE
+postinst_CFLAGS += -fvisibility=hidden -DBUILD_POSTINST -DBUILD_RUNONCE
 postinst_FRAMEWORKS = CoreFoundation
 postinst_INSTALL_PATH = /DEBIAN
 

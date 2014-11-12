@@ -1,10 +1,11 @@
 Package: com.linusyang.appsync
 Name: AppSync
 Priority: standard
-Pre-Depends: firmware (>= 5.0), mobilesubstrate (>= 0.9.5000)
+Pre-Depends: firmware (>= 5.0)
+Depends: mobilesubstrate (>= 0.9.5100)
 Conflicts: us.hackulo.appsync50plus, net.angelxwind.appsyncunified, com.teiron.ppsync, com.xsellize.appsync50, com.xsellize.appsync50plus, appsync50plus.178
 Provides: appsync
-Version: 0.3.1
+Version: 0.4
 Architecture: iphoneos-arm
 Description: AppSync for iOS 5 through 8.1
 Depiction: https://yangapp.googlecode.com/svn/info/appsync.html
