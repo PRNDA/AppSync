@@ -2,7 +2,7 @@
 # Copyright (c) 2014 Linus Yang
 
 TARGET = iphone:clang:latest:5.0
-ARCHS = armv7 arm64
+ARCHS = armv7 armv7s arm64
 TARGET_CODESIGN_FLAGS="-Sentitlement.plist"
 
 include theos/makefiles/common.mk
@@ -18,4 +18,4 @@ appinst_INSTALL_PATH = /usr/bin
 
 include $(THEOS_MAKE_PATH)/tool.mk
 
-VERSION.INC_BUILD_NUMBER = 1
+VERSION.INC_BUILD_NUMBER = 2
